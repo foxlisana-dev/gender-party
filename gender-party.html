@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Гендер-пати — Кто в нашей команде?</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Russo+One&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "Nunito", sans-serif; background: #f9f3f0; color: #222; min-height: 100vh; }
+.banner { width: 100%; max-height: 220px; overflow: hidden; display: block; }
+.banner img { width: 100%; display: block; object-fit: cover; object-position: center top; }
+.page { max-width: 560px; margin: 0 auto; padding: 0 1rem 3rem; }
+.hero { text-align: center; margin: 1.5rem 0 1.25rem; }
+.hero-title { font-family: "Russo One", sans-serif; font-size: 20px; color: #8b1a1a; }
+.hero-subtitle { font-size: 14px; color: #aaa; margin-top: 6px; }
+.ribbon { text-align: center; margin: 0.25rem 0 1.1rem; }
+.ribbon span { display: inline-block; background: #8b1a1a; color: #fff; font-family: "Russo One", sans-serif; font-size: 11px; letter-spacing: 0.1em; padding: 5px 20px; border-radius: 2px; }
+.timer-section { background: #fff; border: 1.5px solid #e8d5c4; border-radius: 16px; padding: 1.25rem; margin-bottom: 1.25rem; text-align: center; }
+.timer-label { font-size: 12px; color: #aaa; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.08em; }
+.timer-boxes { display: flex; justify-content: center; gap: 10px; }
+.timer-box { background: #f9f3f0; border-radius: 12px; padding: 12px 10px; min-width: 64px; border: 1px solid #e8d5c4; }
+.t-num { font-family: "Russo One", sans-serif; font-size: 28px; color: #8b1a1a; line-height: 1; }
+.t-lbl { font-size: 10px; color: #bbb; margin-top: 4px; text-transform: uppercase; }
+.timer-date { font-size: 13px; color: #bbb; margin-top: 12px; }
+.timer-expired { display: none; }
+.timer-expired .exp-text { font-family: "Russo One", sans-serif; font-size: 16px; color: #8b1a1a; }
+.live-section { margin-bottom: 1.25rem; display: none; }
+.live-btn { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 14px; background: #eaf5ea; border: 1.5px solid #a5d6a7; border-radius: 12px; font-size: 15px; font-weight: 700; color: #2e7d32; cursor: pointer; text-decoration: none; }
+.live-dot { width: 10px; height: 10px; border-radius: 50%; background: #e53935; animation: pulse 1.2s infinite; flex-shrink: 0; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.video-section { display: none; margin-bottom: 1.25rem; }
+.video-section h3 { font-family: "Russo One", sans-serif; font-size: 15px; margin-bottom: 12px; color: #8b1a1a; text-align: center; }
+.video-wrap { border-radius: 14px; overflow: hidden; background: #000; }
+.video-wrap iframe, .video-wrap video { width: 100%; aspect-ratio: 16/9; display: block; border: none; }
+.winner-section { display: none; margin-bottom: 1.25rem; }
+.winner-card { border-radius: 16px; padding: 1.5rem; text-align: center; border: 2.5px solid transparent; }
+.winner-card.boy { background: #e8f0fb; border-color: #1a3a8b; }
+.winner-card.girl { background: #fbeaea; border-color: #8b1a1a; }
+.winner-emoji { font-size: 48px; margin-bottom: 10px; }
+.winner-title { font-family: "Russo One", sans-serif; font-size: 24px; }
+.winner-card.boy .winner-title { color: #1a3a8b; }
+.winner-card.girl .winner-title { color: #8b1a1a; }
+.winner-subtitle { font-size: 14px; color: #888; margin-top: 6px; }
+.winners-list { background: #fff; border: 1.5px solid #e8d5c4; border-radius: 16px; padding: 1.25rem; margin-top: 12px; }
+.winners-list h3 { font-family: "Russo One", sans-serif; font-size: 14px; color: #8b1a1a; margin-bottom: 12px; }
+.winner-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; background: #f9f3f0; font-size: 14px; margin-bottom: 8px; }
+.w-rank { font-size: 18px; width: 28px; text-align: center; }
+.w-name { flex: 1; font-weight: 700; color: #222; }
+.w-bet { color: #aaa; font-size: 13px; }
+.w-win { font-weight: 700; margin-left: auto; }
+.w-win.boy { color: #1a3a8b; }
+.w-win.girl { color: #8b1a1a; }
+.vote-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1.25rem; }
+.vote-card { border-radius: 16px; border: 2px solid transparent; padding: 1.5rem 1rem; text-align: center; cursor: pointer; transition: all 0.2s; background: #fff; }
+.vote-card.boy { border-color: #b5c8f4; }
+.vote-card.girl { border-color: #f4b5b5; }
+.vote-card.selected-boy { background: #e8f0fb; border-color: #1a3a8b; box-shadow: 0 0 0 3px #1a3a8b30; }
+.vote-card.selected-girl { background: #fbeaea; border-color: #8b1a1a; box-shadow: 0 0 0 3px #8b1a1a30; }
+.vote-card .icon { font-size: 40px; margin-bottom: 10px; }
+.vote-card .label { font-family: "Russo One", sans-serif; font-size: 16px; }
+.vote-card.boy .label { color: #1a3a8b; }
+.vote-card.girl .label { color: #8b1a1a; }
+.vote-card .tag { font-size: 12px; margin-top: 6px; padding: 3px 12px; border-radius: 20px; display: inline-block; font-weight: 600; }
+.tag-boy { background: #e8f0fb; color: #1a3a8b; }
+.tag-girl { background: #fbeaea; color: #8b1a1a; }
+.form-section { background: #fff; border: 1.5px solid #e8d5c4; border-radius: 16px; padding: 1.25rem; margin-bottom: 1.25rem; }
+.form-section h3 { font-family: "Russo One", sans-serif; font-size: 13px; color: #8b1a1a; margin-bottom: 14px; }
+.field { margin-bottom: 12px; }
+.field label { font-size: 13px; color: #999; display: block; margin-bottom: 4px; }
+.field input { width: 100%; padding: 10px 14px; border: 1.5px solid #e8d5c4; border-radius: 10px; font-size: 15px; background: #f9f3f0; color: #222; outline: none; font-family: "Nunito", sans-serif; transition: border-color 0.2s; }
+.field input:focus { border-color: #8b1a1a; background: #fff; }
+.pay-box { background: #fffbf0; border: 1.5px solid #f0d080; border-radius: 12px; padding: 14px 16px; font-size: 14px; color: #7a5c00; margin-bottom: 1.25rem; display: flex; align-items: flex-start; gap: 10px; line-height: 1.6; }
+.pay-link-girl { display: flex; align-items: center; gap: 8px; background: #fbeaea; border: 1.5px solid #f4b5b5; border-radius: 10px; padding: 10px 14px; text-decoration: none; color: #8b1a1a; font-weight: 700; margin-bottom: 8px; font-size: 14px; }
+.pay-link-boy { display: flex; align-items: center; gap: 8px; background: #e8f0fb; border: 1.5px solid #b5c8f4; border-radius: 10px; padding: 10px 14px; text-decoration: none; color: #1a3a8b; font-weight: 700; margin-bottom: 10px; font-size: 14px; }
+.submit-btn { width: 100%; padding: 14px; border-radius: 12px; border: none; font-size: 16px; font-weight: 700; font-family: "Russo One", sans-serif; cursor: pointer; margin-bottom: 1.5rem; letter-spacing: 0.04em; transition: opacity 0.2s, transform 0.1s; }
+.submit-btn:active { transform: scale(0.98); }
+.submit-btn.active-boy { background: #1a3a8b; color: white; }
+.submit-btn.active-girl { background: #8b1a1a; color: white; }
+.submit-btn.inactive { background: #e8d5c4; color: #bbb; cursor: default; }
+.success-msg { display: none; background: #eafaea; border: 1px solid #b2dfb2; border-radius: 10px; padding: 12px 16px; font-size: 14px; color: #2e7d32; margin-bottom: 1rem; text-align: center; font-weight: 600; }
+.scoreboard { background: #fff; border: 1.5px solid #e8d5c4; border-radius: 16px; padding: 1.25rem; margin-bottom: 1.5rem; }
+.score-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+.score-card { border-radius: 12px; padding: 14px; text-align: center; }
+.boy-bg { background: #e8f0fb; }
+.girl-bg { background: #fbeaea; }
+.s-label { font-size: 13px; margin-bottom: 6px; font-weight: 700; }
+.boy-bg .s-label { color: #1a3a8b; }
+.girl-bg .s-label { color: #8b1a1a; }
+.s-amount { font-family: "Russo One", sans-serif; font-size: 24px; }
+.boy-bg .s-amount { color: #0d2266; }
+.girl-bg .s-amount { color: #6b1010; }
+.s-coef { font-size: 12px; margin-top: 4px; font-weight: 600; }
+.boy-bg .s-coef { color: #1a3a8b; }
+.girl-bg .s-coef { color: #8b1a1a; }
+.progress-wrap { height: 8px; border-radius: 8px; background: #e8d5c4; overflow: hidden; margin-bottom: 16px; }
+.progress-fill { height: 100%; border-radius: 8px; background: linear-gradient(90deg, #1a3a8b 0%, #8b1a1a 100%); transition: width 0.4s; }
+.bets-list { display: flex; flex-direction: column; gap: 8px; }
+.bet-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; background: #f9f3f0; font-size: 14px; }
+.bet-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.bet-dot.boy { background: #1a3a8b; }
+.bet-dot.girl { background: #8b1a1a; }
+.bet-name { flex: 1; color: #222; font-weight: 700; }
+.bet-choice { font-size: 12px; font-weight: 600; }
+.bet-choice.boy { color: #1a3a8b; }
+.bet-choice.girl { color: #8b1a1a; }
+.bet-amt { color: #aaa; margin-left: auto; font-weight: 600; }
+.empty-state { text-align: center; font-size: 14px; color: #ccc; padding: 1rem 0; }
+.admin-toggle { text-align: center; margin-bottom: 1rem; }
+.admin-toggle button { background: none; border: none; font-size: 12px; color: #ddd; cursor: pointer; }
+.admin-panel { display: none; background: #fff; border: 1.5px dashed #e8d5c4; border-radius: 16px; padding: 1.25rem; margin-bottom: 1.5rem; }
+.admin-panel h3 { font-size: 13px; font-weight: 700; color: #bbb; margin-bottom: 14px; text-transform: uppercase; }
+.admin-row { display: flex; gap: 8px; margin-bottom: 10px; align-items: center; flex-wrap: wrap; }
+.admin-row label { font-size: 13px; color: #bbb; min-width: 90px; }
+.admin-row input, .admin-row select { flex: 1; min-width: 160px; padding: 8px 12px; border: 1px solid #e8d5c4; border-radius: 8px; font-size: 14px; background: #f9f3f0; color: #222; outline: none; }
+.admin-btn { padding: 8px 16px; border-radius: 8px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.admin-btn.primary { background: #8b1a1a; color: white; }
+.admin-note { font-size: 12px; color: #ccc; margin-top: 8px; line-height: 1.5; }
+</style>
+</head>
+<body>
+<div class="banner"><img src="https://i.ibb.co/1Y2h2gtB/Chat-GPT-Image-28-2026-16-26-34.png" alt="Gender party" /></div>
+<div class="page">
+  <div class="hero">
+    <div class="hero-title">Делай ставку — узнай кто придёт!</div>
+    <div class="hero-subtitle">Голосуй и следи за счётом в реальном времени</div>
+  </div>
+  <div class="ribbon"><span>ТАЙМЕР РАСКРЫТИЯ</span></div>
+  <div class="timer-section">
+    <div class="timer-label">До раскрытия осталось</div>
+    <div class="timer-boxes" id="timer-boxes">
+      <div class="timer-box"><div class="t-num" id="t-days">00</div><div class="t-lbl">дней</div></div>
+      <div class="timer-box"><div class="t-num" id="t-hours">00</div><div class="t-lbl">часов</div></div>
+      <div class="timer-box"><div class="t-num" id="t-mins">00</div><div class="t-lbl">минут</div></div>
+      <div class="timer-box"><div class="t-num" id="t-secs">00</div><div class="t-lbl">секунд</div></div>
+    </div>
+    <div class="timer-expired" id="timer-expired"><div class="exp-text">🎉 Момент раскрытия наступил!</div></div>
+    <div class="timer-date">4 июля 2025 в 14:00</div>
+  </div>
+  <div class="live-section" id="live-section">
+    <a class="live-btn" id="live-btn" href="#" target="_blank"><div class="live-dot"></div>Смотреть раскрытие в прямом эфире</a>
+  </div>
+  <div class="video-section" id="video-section">
+    <h3>🎬 Смотрите момент раскрытия!</h3>
+    <div class="video-wrap" id="video-wrap"></div>
+  </div>
+  <div class="winner-section" id="winner-section">
+    <div class="winner-card" id="winner-card">
+      <div class="winner-emoji" id="winner-emoji"></div>
+      <div class="winner-title" id="winner-title"></div>
+      <div class="winner-subtitle">Поздравляем победителей!</div>
+    </div>
+    <div class="winners-list"><h3>🏆 ПОБЕДИТЕЛИ</h3><div id="winners-items"></div></div>
+  </div>
+  <div class="ribbon"><span>СДЕЛАЙ СТАВКУ</span></div>
+  <div class="vote-cards">
+    <div class="vote-card boy" id="card-boy" onclick="selectGender('boy')">
+      <div class="icon">💙</div><div class="label">Мальчик</div><div class="tag tag-boy">Команда синих</div>
+    </div>
+    <div class="vote-card girl" id="card-girl" onclick="selectGender('girl')">
+      <div class="icon">🩷</div><div class="label">Девочка</div><div class="tag tag-girl">Команда розовых</div>
+    </div>
+  </div>
+  <div class="form-section">
+    <h3>ВАШИ ДАННЫЕ</h3>
+    <div class="field"><label>Ваше имя</label><input type="text" id="inp-name" placeholder="Например: Аня и Петя" /></div>
+    <div class="field"><label>Сумма ставки (руб.)</label><input type="number" id="inp-amount" placeholder="500" min="1" /></div>
+  </div>
+  <div class="pay-box">
+    <span style="font-size:22px;flex-shrink:0;">💳</span>
+    <div style="width:100%;">
+      <div style="margin-bottom:10px;font-weight:600;">Переведите сумму ставки на счёт в Сбербанке по ссылке:</div>
+      <a class="pay-link-girl" href="https://messenger.online.sberbank.ru/sl/Ju5bJCibzPS9AQehL" target="_blank">
+        <span style="font-size:18px;">🩷</span> За девочку — перевести в Сбер
+      </a>
+      <a class="pay-link-boy" href="https://messenger.online.sberbank.ru/sl/ETShdXjjc7VUMRShY" target="_blank">
+        <span style="font-size:18px;">💙</span> За мальчика — перевести в Сбер
+      </a>
+      <div style="font-size:13px;color:#aaa;">Или переведите на номер <strong style="color:#5a3e00;">+79503570808</strong> (Сбер) с комментарием «мальчик» или «девочка»</div>
+    </div>
+  </div>
+  <div class="success-msg" id="success-msg">🎉 Ставка принята! Не забудьте перевести деньги.</div>
+  <button class="submit-btn inactive" id="submit-btn" onclick="submitBet()">ВЫБЕРИТЕ СТОРОНУ</button>
+  <div class="ribbon"><span>ТЕКУЩИЙ СЧЁТ</span></div>
+  <div class="scoreboard">
+    <div class="score-row">
+      <div class="score-card boy-bg"><div class="s-label">💙 Мальчик</div><div class="s-amount" id="boy-total">0 ₽</div><div class="s-coef" id="boy-coef">коэф. —</div></div>
+      <div class="score-card girl-bg"><div class="s-label">🩷 Девочка</div><div class="s-amount" id="girl-total">0 ₽</div><div class="s-coef" id="girl-coef">коэф. —</div></div>
+    </div>
+    <div class="progress-wrap"><div class="progress-fill" id="progress-fill" style="width:50%;"></div></div>
+    <div class="bets-list" id="bets-list"><div class="empty-state">Пока нет ставок — будьте первыми! 🎉</div></div>
+  </div>
+  <div class="admin-toggle"><button onclick="toggleAdmin()">⚙ для организаторов</button></div>
+  <div class="admin-panel" id="admin-panel">
+    <h3>Панель организатора</h3>
+    <div class="admin-row"><label>Ссылка Live</label><input type="text" id="adm-live" placeholder="https://instagram.com/..." /><button class="admin-btn primary" onclick="setLive()">ОК</button></div>
+    <div class="admin-row"><label>Видео (URL)</label><input type="text" id="adm-video" placeholder="https://youtube.com/..." /><button class="admin-btn primary" onclick="setVideo()">ОК</button></div>
+    <div class="admin-row">
+      <label>Результат</label>
+      <select id="adm-result"><option value="">— ещё не известен —</option><option value="boy">💙 Мальчик</option><option value="girl">🩷 Девочка</option></select>
+      <button class="admin-btn primary" onclick="setResult()">ОК</button>
+    </div>
+    <div class="admin-note">Все изменения видны всем посетителям в реальном времени.</div>
+  </div>
+</div>
+<script>
+const firebaseConfig={databaseURL:"https://gender-party-8bcf9-default-rtdb.europe-west1.firebasedatabase.app"};
+firebase.initializeApp(firebaseConfig);
+const db=firebase.database();
+let selectedGender=null,bets={},settings={};
+const REVEAL_DATE=new Date("2025-07-04T14:00:00");
+function tickTimer(){
+  const diff=REVEAL_DATE-new Date();
+  if(diff<=0){document.getElementById("timer-boxes").style.display="none";document.getElementById("timer-expired").style.display="block";return;}
+  const d=Math.floor(diff/86400000),h=Math.floor((diff%86400000)/3600000),m=Math.floor((diff%3600000)/60000),s=Math.floor((diff%60000)/1000);
+  document.getElementById("t-days").textContent=String(d).padStart(2,"0");
+  document.getElementById("t-hours").textContent=String(h).padStart(2,"0");
+  document.getElementById("t-mins").textContent=String(m).padStart(2,"0");
+  document.getElementById("t-secs").textContent=String(s).padStart(2,"0");
+}
+tickTimer();setInterval(tickTimer,1000);
+db.ref("bets").on("value",snap=>{bets=snap.val()||{};renderScoreboard();if(settings.result)showResult(settings.result);});
+db.ref("settings").on("value",snap=>{settings=snap.val()||{};if(settings.live)showLive(settings.live);if(settings.video)showVideo(settings.video);if(settings.result)showResult(settings.result);});
+function selectGender(g){
+  selectedGender=g;
+  document.getElementById("card-boy").className="vote-card boy"+(g==="boy"?" selected-boy":"");
+  document.getElementById("card-girl").className="vote-card girl"+(g==="girl"?" selected-girl":"");
+  updateBtn();
+}
+function updateBtn(){
+  const btn=document.getElementById("submit-btn");
+  const name=document.getElementById("inp-name").value.trim();
+  const amount=parseFloat(document.getElementById("inp-amount").value);
+  if(!selectedGender){btn.className="submit-btn inactive";btn.textContent="ВЫБЕРИТЕ СТОРОНУ";return;}
+  const cls=selectedGender==="boy"?"active-boy":"active-girl";
+  if(!name||!amount||amount<=0){btn.className="submit-btn "+cls;btn.textContent="ЗАПОЛНИТЕ ИМЯ И СУММУ";return;}
+  btn.className="submit-btn "+cls;
+  btn.textContent=selectedGender==="boy"?"💙 Я ЗА МАЛЬЧИКА!":"🩷 Я ЗА ДЕВОЧКУ!";
+}
+document.getElementById("inp-name").addEventListener("input",updateBtn);
+document.getElementById("inp-amount").addEventListener("input",updateBtn);
+function submitBet(){
+  const name=document.getElementById("inp-name").value.trim();
+  const amount=parseFloat(document.getElementById("inp-amount").value);
+  if(!selectedGender||!name||!amount||amount<=0)return;
+  db.ref("bets").push({name,amount,gender:selectedGender,ts:Date.now()});
+  document.getElementById("inp-name").value="";
+  document.getElementById("inp-amount").value="";
+  selectedGender=null;
+  document.getElementById("card-boy").className="vote-card boy";
+  document.getElementById("card-girl").className="vote-card girl";
+  const msg=document.getElementById("success-msg");
+  msg.style.display="block";setTimeout(()=>{msg.style.display="none";},3000);
+  updateBtn();
+}
+function renderScoreboard(){
+  const arr=Object.values(bets);
+  const boyTotal=arr.filter(b=>b.gender==="boy").reduce((s,b)=>s+b.amount,0);
+  const girlTotal=arr.filter(b=>b.gender==="girl").reduce((s,b)=>s+b.amount,0);
+  const total=boyTotal+girlTotal;
+  document.getElementById("boy-total").textContent=boyTotal.toFixed(0)+" ₽";
+  document.getElementById("girl-total").textContent=girlTotal.toFixed(0)+" ₽";
+  if(total>0){
+    document.getElementById("boy-coef").textContent=boyTotal>0?"коэф. "+(total/boyTotal).toFixed(2):"коэф. —";
+    document.getElementById("girl-coef").textContent=girlTotal>0?"коэф. "+(total/girlTotal).toFixed(2):"коэф. —";
+    document.getElementById("progress-fill").style.width=(boyTotal/total*100).toFixed(1)+"%";
+  }
+  const list=document.getElementById("bets-list");
+  if(arr.length===0){list.innerHTML='<div class="empty-state">Пока нет ставок — будьте первыми! 🎉</div>';return;}
+  list.innerHTML=Object.entries(bets).sort((a,b)=>b[1].ts-a[1].ts).map(([k,b])=>`<div class="bet-item"><div class="bet-dot ${b.gender}"></div><div class="bet-name">${b.name}</div><div class="bet-choice ${b.gender}">${b.gender==="boy"?"💙 мальчик":"🩷 девочка"}</div><div class="bet-amt">${b.amount.toFixed(0)} ₽</div></div>`).join("");
+}
+function showLive(url){document.getElementById("live-btn").href=url;document.getElementById("live-section").style.display="block";}
+function showVideo(url){
+  const wrap=document.getElementById("video-wrap");
+  const yt=url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|shorts\/))([^&?\s]+)/);
+  wrap.innerHTML=yt?`<iframe src="https://www.youtube.com/embed/${yt[1]}" allowfullscreen></iframe>`:`<video src="${url}" controls></video>`;
+  document.getElementById("video-section").style.display="block";
+  document.getElementById("live-section").style.display="none";
+}
+function showResult(res){
+  const arr=Object.values(bets);
+  const card=document.getElementById("winner-card");
+  if(res==="boy"){card.className="winner-card boy";document.getElementById("winner-emoji").textContent="💙👦";document.getElementById("winner-title").textContent="ЭТО МАЛЬЧИК!";}
+  else{card.className="winner-card girl";document.getElementById("winner-emoji").textContent="🩷👧";document.getElementById("winner-title").textContent="ЭТО ДЕВОЧКА!";}
+  document.getElementById("winner-section").style.display="block";
+  const winners=arr.filter(b=>b.gender===res);
+  const losers=arr.filter(b=>b.gender!==res);
+  const totalPot=arr.reduce((s,b)=>s+b.amount,0);
+  const winnersPot=winners.reduce((s,b)=>s+b.amount,0);
+  const medals=["🥇","🥈","🥉"];
+  let html="";
+  if(winners.length===0){html='<div class="empty-state">Никто не угадал! 😮</div>';}
+  else{
+    html=[...winners].sort((a,b)=>b.amount-a.amount).map((w,i)=>{
+      const payout=winnersPot>0?(w.amount/winnersPot*totalPot):0;
+      return `<div class="winner-item"><div class="w-rank">${medals[i]||"🎉"}</div><div class="w-name">${w.name}</div><div class="w-bet">ставка: ${w.amount.toFixed(0)} ₽</div><div class="w-win ${res}">+${payout.toFixed(0)} ₽</div></div>`;
+    }).join("");
+    if(losers.length>0)html+=`<div style="margin-top:12px;font-size:13px;color:#ccc;text-align:center;">Не угадали: ${losers.map(l=>l.name).join(", ")}</div>`;
+  }
+  document.getElementById("winners-items").innerHTML=html;
+}
+function toggleAdmin(){const p=document.getElementById("admin-panel");p.style.display=p.style.display==="block"?"none":"block";}
+function setLive(){const u=document.getElementById("adm-live").value.trim();if(u)db.ref("settings/live").set(u);}
+function setVideo(){const u=document.getElementById("adm-video").value.trim();if(u)db.ref("settings/video").set(u);}
+function setResult(){const v=document.getElementById("adm-result").value;if(v)db.ref("settings/result").set(v);}
+</script>
+</body>
+</html>
